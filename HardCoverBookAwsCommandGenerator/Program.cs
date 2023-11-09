@@ -1,9 +1,7 @@
-﻿string filePath = @"C:\Temp\";
-string payloadFileName = "Monolith.json";
-string outfileName = "Outfile.txt";
-string command = "";
-string environment = "";
-
+﻿string environment = "";
+string lambdaArn = "";
+string filePath = @"C:\Temp\";
+string pdfGenBcuketName = "";
 Console.WriteLine($"** Generate AWS lambda invoke command ** {Environment.NewLine}");
 
 while (String.IsNullOrEmpty(environment))
@@ -15,12 +13,18 @@ while (String.IsNullOrEmpty(environment))
     {
         case "1":
             environment = "DEV";
+            pdfGenBcuketName = "whcc-development-pdfgen-claimcheck-dev-ue2";
+            lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         case "2":
             environment = "STAGE";
+            pdfGenBcuketName = "whcc-stage-pdfgen-claimcheck-stage-ue2";
+            lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         case "3":
             environment = "PROD";
+            pdfGenBcuketName = "whcc-production-pdfgen-claimcheck-prod-ue2";
+            lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         default:
             Console.WriteLine("Invalid choice!");
@@ -28,12 +32,23 @@ while (String.IsNullOrEmpty(environment))
     }
 }
 
+Console.WriteLine($"Enter S3 object key:");
+string s3ObjectKey = Console.ReadLine();
+
+// aws s3api get-object --bucket whcc-production-pdfgen-claimcheck-prod-ue2 --key fWvvCoDtAupbRmjKX/fWvvCoDtAupbRmjKX-1699490941656.json --profile whcc-platform-prod /Users/cliff.robbins/Local_Source/pdfGen_pdfLib/fWvvCoDtAupbRmjKX-1699490941656.json
+string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {filePath}{s3ObjectKey}";
+WriteCommand(filePath, s3GetCommand, "s3GetCommand.txt");
+
+string payloadFileName = s3ObjectKey;
+string outfileName = "Outfile.txt";
+
 Console.WriteLine($"Running the command in environment: {environment}");
-command = @$"aws lambda invoke --function-name PDFGen:{environment} --region us-east-1 --profile whcc-dgbn --payload {filePath}{payloadFileName} {filePath}{outfileName}";
-WriteCommand(filePath, command, "GeneratedCommand.txt");
+string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload {filePath}{payloadFileName} {filePath}{outfileName}";
+WriteCommand(filePath, lambdaInvokeCommand, "lambdaInvokeCommand.txt");
 
 static void WriteCommand(string path, string command, string fileName)
 {
     if (!String.IsNullOrEmpty(command) && !String.IsNullOrEmpty(path))
         File.WriteAllText($@"{path}\{fileName}", command);
 }
+

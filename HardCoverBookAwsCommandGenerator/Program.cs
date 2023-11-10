@@ -45,9 +45,10 @@ string jsonData = Console.ReadLine();
 // Generate S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(jsonData);
 
-string userDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-string commandSavePath = @$"{userDirectory}/Temp/{inputJsonObject.OrderUID}";
-string commandFile = @$"{commandSavePath}/{inputJsonObject.OrderUID}-commands.txt";
+string userDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+//string commandSavePath = @$"{userDirectory}/Temp/{inputJsonObject.OrderUID}";
+string commandSavePath = Path.Combine(new string[] { userDirectory, "Temp", inputJsonObject.OrderUID.ToString() });
+string commandFile = Path.Combine(new string[] { commandSavePath, $"{inputJsonObject.OrderUID}-commands.txt" });
 
 // Create a unique directory
 Directory.CreateDirectory(commandSavePath);
@@ -57,18 +58,18 @@ string s3ObjectKey = PdfGenEvent.GetObjectKeyNameFromAssetPath(inputJsonObject.O
 string[] splitObjectKey = s3ObjectKey.Split('/');
 
 // Create the s3output file
-string s3OutputFile = @$"{commandSavePath}/{splitObjectKey[splitObjectKey.Length-1]}";
+string s3OutputFile = Path.Combine(new string[] { commandSavePath, splitObjectKey[splitObjectKey.Length - 1] });
 
 AppendToFile(commandFile, "aws sso login --sso-session whcc-sso");
 AppendToFile(commandFile, "https://admin.whcc.com/order-album-browser.php?sort=desc&acct=161333");
 
-string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3OutputFile}";
+string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3OutputFile.Replace(" ", @"\")}";
 AppendToFile(commandFile, s3GetCommand,2);
 
 string outfileName = $"pdfGenResult.json";
 
 // Gemerate Lambda invoke command.
-string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3OutputFile} {commandSavePath}/{outfileName}";
+string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3OutputFile.Replace(" ", @"\")} {Path.Combine(new string[] { commandSavePath.Replace(" ", @"\") , outfileName })}";
 AppendToFile(commandFile, lambdaInvokeCommand,2);
 
 // Generate SQL query
@@ -143,4 +144,3 @@ static void AppendToFile(string filePath, string data, int newLineCount = 0)
             Console.WriteLine($"An error occurred: {e.Message}");
         }
     }
-

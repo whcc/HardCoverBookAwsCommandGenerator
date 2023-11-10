@@ -35,12 +35,9 @@ while (String.IsNullOrEmpty(environment))
 }
 
 Console.WriteLine($"Generating the commands for environment: {environment}");
+
 Console.WriteLine($"** Input Json ** {Environment.NewLine}");
-
 string jsonData = Console.ReadLine();
-
-
-// 
 
 // Generate S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(jsonData);

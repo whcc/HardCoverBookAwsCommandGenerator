@@ -13,12 +13,10 @@ namespace HardCoverBookAwsCommandGenerator
         public int ItemAssetUID { get; set; }
         public string OrderAssetPath { get; set; }
 
-        public static PdfGenEvent GetJsonObject(string path)
+        public static PdfGenEvent GetJsonObject(string jsonString)
         {
-            string jsonContent = File.ReadAllText(path);
-
             // Deserialize the JSON content into an object
-            return JsonConvert.DeserializeObject<PdfGenEvent>(jsonContent);
+            return JsonConvert.DeserializeObject<PdfGenEvent>(jsonString);
         }
 
         public static string GetObjectKeyNameFromAssetPath(string assetPath)

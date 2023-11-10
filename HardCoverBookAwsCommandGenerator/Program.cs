@@ -49,7 +49,7 @@ string commandFile = Path.Combine(new string[] { commandSavePath, $"{inputJsonOb
 
 // Create a unique directory
 Directory.CreateDirectory(commandSavePath);
-DeleteFileIfExists(commandFile);
+DeleteAllFilesInDirectory(commandSavePath);
 
 string s3ObjectKey = PdfGenEvent.GetObjectKeyNameFromAssetPath(inputJsonObject.OrderAssetPath);
 string[] splitObjectKey = s3ObjectKey.Split('/');
@@ -68,6 +68,8 @@ string outfileName = $"pdfGenResult.json";
 // Gemerate Lambda invoke command.
 string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3OutputFile.Replace(" ", @"\")} {Path.Combine(new string[] { commandSavePath.Replace(" ", @"\") , outfileName })}";
 AppendToFile(commandFile, lambdaInvokeCommand,2);
+
+AppendToFile(commandFile, "******************Udate the AssetPath with the output of the lambda invoke******************", 1);
 
 // Generate SQL query
 string query = $@"USE OrderStaging 
@@ -99,6 +101,10 @@ string query = $@"USE OrderStaging
 
 AppendToFile(commandFile, query,2);
 
+Console.WriteLine($"The data was written to the dir {commandSavePath}");
+Console.WriteLine("Press any key to quit");
+Console.ReadLine();
+
 static void DeleteFileIfExists(string filePath)
 {
     if (File.Exists(filePath))
@@ -106,7 +112,7 @@ static void DeleteFileIfExists(string filePath)
         try
         {
             File.Delete(filePath);
-            Console.WriteLine("File deleted successfully.");
+            Console.WriteLine($"File deleted successfully:: {filePath}.");
         }
         catch (IOException e)
         {
@@ -116,6 +122,29 @@ static void DeleteFileIfExists(string filePath)
     else
     {
         Console.WriteLine("The file does not exist.");
+    }
+}
+static void DeleteAllFilesInDirectory(string directoryPath)
+{
+    try
+    {
+        if (Directory.Exists(directoryPath))
+        {
+            string[] files = Directory.GetFiles(directoryPath);
+            foreach (string file in files)
+            {
+                DeleteFileIfExists(file);
+            }
+            Console.WriteLine($"All files in directory {directoryPath} deleted successfully.");
+        }
+        else
+        {
+            Console.WriteLine($"Directory does not exist: {directoryPath}");
+        }
+    }
+    catch (IOException e)
+    {
+        Console.WriteLine($"An error occurred while deleting files: {e.Message}");
     }
 }
 

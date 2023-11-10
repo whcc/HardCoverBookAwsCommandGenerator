@@ -60,6 +60,7 @@ string[] splitObjectKey = s3ObjectKey.Split('/');
 string s3OutputFile = @$"{commandSavePath}/{splitObjectKey[splitObjectKey.Length-1]}";
 
 AppendToFile(commandFile, "aws sso login --sso-session whcc-sso");
+AppendToFile(commandFile, "https://admin.whcc.com/order-album-browser.php?sort=desc&acct=161333");
 
 string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3OutputFile}";
 AppendToFile(commandFile, s3GetCommand,2);

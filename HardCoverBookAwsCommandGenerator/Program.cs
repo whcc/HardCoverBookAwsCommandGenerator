@@ -39,6 +39,7 @@ Console.WriteLine($"Generating the commands for environment: {environment}");
 string commandSavePath = @"C:/Temp/";
 string inputJsonFilePath = @"C:/Temp/InputJson/InputJson.Json";
 string s3ObjectSavePath = @"C:/Temp/s3ObjectSave/";
+string sqlQuerySavePath = @"C:/Temp/SQL/";
 
 // S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath);
@@ -54,8 +55,39 @@ string outfileName = $"Outfile.json";
 string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3ObjectSavePath}{s3ObjectKey} {commandSavePath}{outfileName}";
 WriteCommand(commandSavePath, lambdaInvokeCommand, $"{inputJsonObject.OrderUID}_lambdaInvokeCommand.txt");
 
+// Generate SQL query
+string query = $@"USE OrderStaging 
+                    BEGIN TRY
+	                    BEGIN TRANSACTION 
+
+	                    Select * from OrderStaging.dbo.Orders Where OrderUID = {inputJsonObject.OrderUID}
+	                    Select * from OrderItemAsset where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
+
+	                    Update OrderItemAsset set AssetPath = '{inputJsonObject.OrderAssetPath}' where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
+
+	                    Update OrderStaging.dbo.Orders set OrderStatusID = '5', ProcessedDt = null Where OrderUID = {inputJsonObject.OrderUID}
+
+	                    Select * from  OrderStaging.dbo.Orders Where OrderUID = {inputJsonObject.OrderUID}
+	                    Select * from OrderItemAsset where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
+
+	                    COMMIT TRANSACTION
+                    END TRY
+                    BEGIN CATCH
+                        IF @@TRANCOUNT > 0
+                            ROLLBACK TRAN
+
+                            DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE()
+                            DECLARE @ErrorSeverity INT = ERROR_SEVERITY()
+                            DECLARE @ErrorState INT = ERROR_STATE()
+ 
+                        RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
+                    END CATCH";
+
+WriteCommand(sqlQuerySavePath, query, $"{inputJsonObject.OrderUID}.sql");
+
 static void WriteCommand(string path, string command, string fileName)
 {
     if (!String.IsNullOrEmpty(command) && !String.IsNullOrEmpty(path))
         File.WriteAllText($@"{path}\{fileName}", command);
 }
+

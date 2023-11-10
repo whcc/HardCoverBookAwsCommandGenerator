@@ -42,9 +42,10 @@ string s3ObjectSavePath = @"C:/Temp/s3ObjectSave/";
 
 // S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath);
-string s3ObjectKey = PdfGenEvent.GetJsonFileNameFromAssetPath(inputJsonObject.OrderAssetPath);
+string s3ObjectKey = PdfGenEvent.GetObjectKeyNameFromAssetPath(inputJsonObject.OrderAssetPath);
+string[] splitObjectKey = s3ObjectKey.Split('/');
 
-string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3ObjectSavePath}{s3ObjectKey}"; ;
+string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3ObjectSavePath}{splitObjectKey[splitObjectKey.Length-1]}";
 WriteCommand(commandSavePath, s3GetCommand, $"{inputJsonObject.OrderUID}_s3GetCommand.txt");
 
 string outfileName = $"Outfile.json";
@@ -58,5 +59,3 @@ static void WriteCommand(string path, string command, string fileName)
     if (!String.IsNullOrEmpty(command) && !String.IsNullOrEmpty(path))
         File.WriteAllText($@"{path}\{fileName}", command);
 }
-
-// Just one outfile.

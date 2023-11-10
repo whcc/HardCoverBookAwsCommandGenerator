@@ -21,7 +21,7 @@ namespace HardCoverBookAwsCommandGenerator
             return JsonConvert.DeserializeObject<PdfGenEvent>(jsonContent);
         }
 
-        public static string GetJsonFileNameFromAssetPath(string assetPath)
+        public static string GetObjectKeyNameFromAssetPath(string assetPath)
         {
             int startingIndex = assetPath.IndexOf("ue2/");
             string fileName = assetPath.Substring(startingIndex + 4, assetPath.Length - (startingIndex + 4));

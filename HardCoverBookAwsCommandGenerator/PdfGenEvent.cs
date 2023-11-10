@@ -15,8 +15,6 @@ namespace HardCoverBookAwsCommandGenerator
 
         public static PdfGenEvent GetJsonObject(string jsonContent)
         {
-            //string jsonContent = File.ReadAllText(data);
-
             // Deserialize the JSON content into an object
             return JsonConvert.DeserializeObject<PdfGenEvent>(jsonContent);
         }

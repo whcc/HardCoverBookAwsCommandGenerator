@@ -45,7 +45,8 @@ string jsonData = Console.ReadLine();
 // Generate S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(jsonData);
 
-string commandSavePath = @$"/Users/cliff.robbins/Temp/{inputJsonObject.OrderUID}";
+string userDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+string commandSavePath = @$"{userDirectory}/Temp/{inputJsonObject.OrderUID}";
 string commandFile = @$"{commandSavePath}/{inputJsonObject.OrderUID}-commands.txt";
 
 // Create a unique directory

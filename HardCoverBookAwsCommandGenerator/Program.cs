@@ -41,7 +41,7 @@ string inputJsonFilePath = @"C:/Temp/InputJson/InputJson.Json";
 string s3ObjectSavePath = @"C:/Temp/s3ObjectSave/";
 string sqlQuerySavePath = @"C:/Temp/SQL/";
 
-// S3 get object command
+// Generate S3 get object command
 PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath);
 string s3ObjectKey = PdfGenEvent.GetObjectKeyNameFromAssetPath(inputJsonObject.OrderAssetPath);
 string[] splitObjectKey = s3ObjectKey.Split('/');
@@ -51,7 +51,7 @@ WriteCommand(commandSavePath, s3GetCommand, $"{inputJsonObject.OrderUID}_s3GetCo
 
 string outfileName = $"Outfile.json";
 
-// Lambda invoke command.
+// Gemerate Lambda invoke command.
 string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3ObjectSavePath}{s3ObjectKey} {commandSavePath}{outfileName}";
 WriteCommand(commandSavePath, lambdaInvokeCommand, $"{inputJsonObject.OrderUID}_lambdaInvokeCommand.txt");
 

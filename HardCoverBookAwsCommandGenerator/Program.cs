@@ -15,17 +15,17 @@ while (String.IsNullOrEmpty(environment))
     {
         case "1":
             environment = "DEV";
-            pdfGenBcuketName = "whcc-development-pdfgen-claimcheck-dev-ue2";
+            pdfGenBcuketName = $"whcc-production-pdfgen-claimcheck-{environment.ToLower()}-ue2";
             lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         case "2":
             environment = "STAGE";
-            pdfGenBcuketName = "whcc-stage-pdfgen-claimcheck-stage-ue2";
+            pdfGenBcuketName = $"whcc-production-pdfgen-claimcheck-{environment.ToLower()}-ue2";
             lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         case "3":
             environment = "PROD";
-            pdfGenBcuketName = "whcc-production-pdfgen-claimcheck-prod-ue2";
+            pdfGenBcuketName = $"whcc-production-pdfgen-claimcheck-{environment.ToLower()}-ue2";
             lambdaArn = "arn:aws:lambda:us-east-1:845720824676:function:PDFGen";
             break;
         default:
@@ -41,16 +41,16 @@ string inputJsonFilePath = @"C:/Temp/InputJson/InputJson.Json";
 string s3ObjectSavePath = @"C:/Temp/s3ObjectSave/";
 
 // S3 get object command
-PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath); ;
+PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath);
 string s3ObjectKey = PdfGenEvent.GetJsonFileNameFromAssetPath(inputJsonObject.OrderAssetPath);
 
 string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3ObjectSavePath}{s3ObjectKey}"; ;
 WriteCommand(commandSavePath, s3GetCommand, $"{inputJsonObject.OrderUID}_s3GetCommand.txt");
 
-string outfileName = $"{inputJsonObject.OrderUID}_Outfile.json";
+string outfileName = $"Outfile.json";
 
 // Lambda invoke command.
-string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3ObjectSavePath}{s3ObjectKey} {commandSavePath}{outfileName}";
+string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3ObjectSavePath}{s3ObjectKey} {commandSavePath}{outfileName}";
 WriteCommand(commandSavePath, lambdaInvokeCommand, $"{inputJsonObject.OrderUID}_lambdaInvokeCommand.txt");
 
 static void WriteCommand(string path, string command, string fileName)
@@ -58,3 +58,5 @@ static void WriteCommand(string path, string command, string fileName)
     if (!String.IsNullOrEmpty(command) && !String.IsNullOrEmpty(path))
         File.WriteAllText($@"{path}\{fileName}", command);
 }
+
+// Just one outfile.

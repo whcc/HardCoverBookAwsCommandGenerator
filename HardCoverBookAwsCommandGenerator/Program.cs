@@ -35,25 +35,39 @@ while (String.IsNullOrEmpty(environment))
 }
 
 Console.WriteLine($"Generating the commands for environment: {environment}");
+Console.WriteLine($"** Input Json ** {Environment.NewLine}");
 
-string commandSavePath = @"C:/Temp/";
-string inputJsonFilePath = @"C:/Temp/InputJson/InputJson.Json";
-string s3ObjectSavePath = @"C:/Temp/s3ObjectSave/";
-string sqlQuerySavePath = @"C:/Temp/SQL/";
+string jsonData = Console.ReadLine();
+
+
+// 
 
 // Generate S3 get object command
-PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(inputJsonFilePath);
+PdfGenEvent inputJsonObject = PdfGenEvent.GetJsonObject(jsonData);
+
+string commandSavePath = @$"/Users/cliff.robbins/Temp/{inputJsonObject.OrderUID}";
+string commandFile = @$"{commandSavePath}/{inputJsonObject.OrderUID}-commands.txt";
+
+// Create a unique directory
+Directory.CreateDirectory(commandSavePath);
+DeleteFileIfExists(commandFile);
+
 string s3ObjectKey = PdfGenEvent.GetObjectKeyNameFromAssetPath(inputJsonObject.OrderAssetPath);
 string[] splitObjectKey = s3ObjectKey.Split('/');
 
-string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3ObjectSavePath}{splitObjectKey[splitObjectKey.Length-1]}";
-WriteCommand(commandSavePath, s3GetCommand, $"{inputJsonObject.OrderUID}_s3GetCommand.txt");
+// Create the s3output file
+string s3OutputFile = @$"{commandSavePath}/{splitObjectKey[splitObjectKey.Length-1]}";
 
-string outfileName = $"Outfile.json";
+AppendToFile(commandFile, "aws sso login --sso-session whcc-sso");
+
+string s3GetCommand = $"aws s3api get-object --bucket {pdfGenBcuketName} --key {s3ObjectKey} --profile whcc-platform-{environment.ToLower()} {s3OutputFile}";
+AppendToFile(commandFile, s3GetCommand,2);
+
+string outfileName = $"pdfGenResult.json";
 
 // Gemerate Lambda invoke command.
-string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3ObjectSavePath}{s3ObjectKey} {commandSavePath}{outfileName}";
-WriteCommand(commandSavePath, lambdaInvokeCommand, $"{inputJsonObject.OrderUID}_lambdaInvokeCommand.txt");
+string lambdaInvokeCommand = @$"aws lambda invoke --function-name {lambdaArn} --qualifier {environment.ToUpper()} --profile whcc-dogbone-{environment.ToLower()} --cli-binary-format raw-in-base64-out --cli-read-timeout 1200 --payload file://{s3OutputFile} {commandSavePath}/{outfileName}";
+AppendToFile(commandFile, lambdaInvokeCommand,2);
 
 // Generate SQL query
 string query = $@"USE OrderStaging 
@@ -63,7 +77,7 @@ string query = $@"USE OrderStaging
 	                    Select * from OrderStaging.dbo.Orders Where OrderUID = {inputJsonObject.OrderUID}
 	                    Select * from OrderItemAsset where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
 
-	                    Update OrderItemAsset set AssetPath = '{inputJsonObject.OrderAssetPath}' where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
+	                    Update OrderItemAsset set AssetPath = '' where OrderItemAssetUID = {inputJsonObject.ItemAssetUID}
 
 	                    Update OrderStaging.dbo.Orders set OrderStatusID = '5', ProcessedDt = null Where OrderUID = {inputJsonObject.OrderUID}
 
@@ -83,11 +97,48 @@ string query = $@"USE OrderStaging
                         RAISERROR (@ErrorMessage, @ErrorSeverity, @ErrorState);
                     END CATCH";
 
-WriteCommand(sqlQuerySavePath, query, $"{inputJsonObject.OrderUID}.sql");
+AppendToFile(commandFile, query,2);
 
-static void WriteCommand(string path, string command, string fileName)
+static void DeleteFileIfExists(string filePath)
 {
-    if (!String.IsNullOrEmpty(command) && !String.IsNullOrEmpty(path))
-        File.WriteAllText($@"{path}\{fileName}", command);
+    if (File.Exists(filePath))
+    {
+        try
+        {
+            File.Delete(filePath);
+            Console.WriteLine("File deleted successfully.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine($"An error occurred while deleting the file: {e.Message}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("The file does not exist.");
+    }
 }
+
+
+static void AppendToFile(string filePath, string data, int newLineCount = 0)
+    {
+        try
+        {
+            using (StreamWriter writer = new StreamWriter(filePath, true))
+            {
+                for (int i = 0; i < newLineCount; i++)
+                {
+                    writer.WriteLine();
+                }
+
+                writer.WriteLine(data);
+            }
+
+            Console.WriteLine("Data appended successfully.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine($"An error occurred: {e.Message}");
+        }
+    }
 
